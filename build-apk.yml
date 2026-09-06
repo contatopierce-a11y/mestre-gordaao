@@ -1,0 +1,64 @@
+name: Gerar APK do Mestre Gordão
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar projeto
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar componentes Android
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Extrair Mestre Gordão
+        run: |
+          unzip -o Mestre_Gordao_Android_2.1.zip
+          ls -la
+          ls -la mestre_gordao_android
+
+      - name: Instalar dependências
+        working-directory: mestre_gordao_android
+        run: npm install
+
+      - name: Criar projeto Android
+        working-directory: mestre_gordao_android
+        run: |
+          rm -rf android
+          npx cap add android
+          npx cap sync android
+
+      - name: Compilar APK
+        working-directory: mestre_gordao_android/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Publicar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mestre-Gordao-APK
+          path: mestre_gordao_android/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
